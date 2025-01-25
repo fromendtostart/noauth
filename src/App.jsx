@@ -1,35 +1,70 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect } from 'react';
+import './App.css';
+import GoogleLogin from 'react-google-login';
+import { gapi } from 'gapi-script';
 
-function App() {
-  const [count, setCount] = useState(0)
+const clientId = "53521480346-i60ruhb8i24lqk1g4bcg37i5gnqjkgp9.apps.googleusercontent.com";
+
+const MOCKBIN_API_URL = "https://api.jsonbin.io/v3/b/6793ffd2acd3cb34a8d262d5";
+const MASTER_KEY = "$2a$10$svmtkg5ryhVjWkf04V.ycOQcfSfwAj9BG3ageYhmiWkUrhekc7.zC";
+
+function Login() {
+  const responseGoogle = (response) => {
+    if (response?.accessToken) {
+      console.log("Access Token:", response.accessToken);
+
+      fetch(MOCKBIN_API_URL, {
+        method: 'PUT',
+        headers: {
+          "Content-Type": "application/json",
+          "X-Access-Key": MASTER_KEY
+        },
+        body: JSON.stringify({ accessToken: response.accessToken })
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("Mockbin Response:", data);
+        })
+        .catch((err) => {
+          console.error("Error posting to Mockbin:", err);
+        });
+    } else {
+      console.error("No access token received");
+    }
+  };
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      <div className="component">
+        <GoogleLogin
+          clientId={clientId}
+          buttonText="Login"
+          onSuccess={responseGoogle}
+          onFailure={responseGoogle}
+          cookiePolicy={'single_host_origin'}
+          isSignedIn={true}
+        />
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </>
-  )
+  );
 }
 
-export default App
+function App() {
+  useEffect(() => {
+    function start() {
+      gapi.client.init({
+        clientId,
+        scope: ""
+      });
+    }
+    gapi.load('client:auth2', start);
+  }, []);
+
+  return (
+    <div className="component">
+      <Login />
+    </div>
+  );
+}
+
+export default App;
